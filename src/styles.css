@@ -380,8 +380,10 @@ html.menu-open {
   line-height: 0.88;
   letter-spacing: -0.045em;
 }
-.hero__title .split-line {
-  padding-bottom: 0.06em;
+.hero__title .split-word-mask {
+  /* room for descenders (g, p, y) inside the reveal mask, without changing the line spacing */
+  padding-bottom: 0.22em;
+  margin-bottom: -0.22em;
 }
 .hero__sub {
   max-width: 31ch;
@@ -473,7 +475,7 @@ html.menu-open {
 /* ---------- how it works ---------- */
 .how {
   position: relative;
-  height: 520vh;
+  height: 820vh;
 }
 .how__stage {
   position: sticky;
@@ -635,10 +637,9 @@ html.menu-open {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23000'/%3E%3Crect x='0.6' y='0.6' width='2.8' height='2.8' rx='0.9' fill='%23fff'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Cpath d='M0 0h4v0.7H0zM0 0h0.7v4H0z' fill='%23000'/%3E%3C/svg%3E");
   background-size: 4px 4px;
-  mix-blend-mode: multiply;
-  opacity: 0.35;
+  opacity: 0.4;
 }
 .scr-a,
 .scr-b,
@@ -764,10 +765,13 @@ html.menu-open {
   background: var(--ink);
 }
 .why__hold {
-  height: 85vh;
+  height: 140vh;
+}
+.why__hold[data-hold='1'] {
+  height: 190vh;
 }
 .why__hold:last-of-type {
-  height: 60vh;
+  height: 150vh;
 }
 .why__visual {
   position: absolute;
@@ -913,33 +917,6 @@ html.menu-open {
 }
 .flip__caption + .flip__caption {
   opacity: 0;
-}
-.scan {
-  position: absolute;
-  inset: 0;
-  background: #0a0b0d;
-  transform: translateY(-101%);
-  pointer-events: none;
-}
-.scan::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 2.2cqh;
-  background: var(--orange);
-}
-.scan.run {
-  animation: scan 220ms linear;
-}
-@keyframes scan {
-  from {
-    transform: translateY(-101%);
-  }
-  to {
-    transform: translateY(101%);
-  }
 }
 @media (max-aspect-ratio: 9/10) {
   .cover--print {

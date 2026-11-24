@@ -9,7 +9,7 @@ import logo from '../assets/brand/movemedia-horizontal-colour-on-dark.svg';
 import data from '../data/aerial.json';
 import { ScreenLogo, ScreenSymbol, ScreenLine } from '../components/Screen.jsx';
 import { WHY, SCREEN_LINES } from '../content.js';
-import { reduced, range, smooth, clamp01 } from '../lib/motion.js';
+import { onFrame, reduced, range, smooth, clamp01 } from '../lib/motion.js';
 import { resample, pointAt } from '../lib/geo.js';
 import { FACE } from './How.jsx';
 
@@ -43,8 +43,24 @@ export default function Why() {
     const trail = qa('.why-route i'), marker = q('.why-route__marker'), routeBox = q('.why-route');
     const nightImg = q('.why-sky__night'), skyLabel = qa('.why-sky__label');
     const flip = q('.flip__body'), sides = qa('.flip__caption');
-    const msgs = qa('.why-print .scr-msg'), scan = q('.why-print .scan');
-    let lastMsg = -1, lastLit = 0;
+    const msgs = qa('.why-print .scr-msg');
+    let lastLit = 0, printOn = false, shown = 0, clock = 0;
+    const show = (m) => {
+      if (m === shown) return;
+      msgs[shown].classList.remove('on');
+      msgs[m].classList.add('on');
+      shown = m;
+    };
+    // the face changes on a steady clock while the panel is on screen, with a clean instant cut,
+    // so each message holds long enough to read whatever the scroll speed
+    const offClock = onFrame((dt) => {
+      if (!printOn) return;
+      clock += dt;
+      if (clock >= 1.7) {
+        clock = 0;
+        show((shown + 1) % msgs.length);
+      }
+    });
 
     const painters = [
       (p) => {
@@ -58,7 +74,8 @@ export default function Why() {
         marker.style.transform = `translate3d(calc(${((x / 100) * routeBox.offsetWidth).toFixed(1)}px - 50%), calc(${((y / 100) * routeBox.offsetHeight).toFixed(1)}px - 50%), 0)`;
       },
       (p) => {
-        const n = smooth(range(p, 0.15, 0.75));
+        // midday holds for the first part of the panel, then the sky turns to midnight
+        const n = smooth(range(p, 0.4, 0.85));
         nightImg.style.opacity = String(n);
         skyLabel[0].style.opacity = String(1 - n);
         skyLabel[1].style.opacity = String(n);
@@ -70,17 +87,12 @@ export default function Why() {
         sides[1].style.opacity = String(smooth(range(r, 0.5, 0.65)));
       },
       (p) => {
-        // the face switches instantly, as an LED screen does: one hard cut per quarter
-        const m = Math.min(msgs.length - 1, Math.floor(range(p, 0.05, 0.95) * msgs.length));
-        if (m !== lastMsg) {
-          msgs.forEach((x, k) => x.classList.toggle('on', k === m));
-          if (lastMsg !== -1) {
-            scan.classList.remove('run');
-            void scan.offsetWidth;
-            scan.classList.add('run');
-          }
-          lastMsg = m;
+        const on = p > 0 && p < 1;
+        if (on && !printOn) {
+          clock = 0;
+          show(0);
         }
+        printOn = on;
       },
     ];
     const sts = qa('.why__hold').map((hold, i) =>
@@ -107,7 +119,10 @@ export default function Why() {
         },
       }),
     );
-    return () => [...sts, ...backs].forEach((s) => s.kill());
+    return () => {
+      offClock();
+      [...sts, ...backs].forEach((s) => s.kill());
+    };
   }, [route]);
 
   const trailDots = useMemo(() => resample(data.top.route, 110), []);
@@ -180,7 +195,6 @@ export default function Why() {
             <div className="scr-msg">
               <ScreenLine text={SCREEN_LINES[1]} />
             </div>
-            <span className="scan" />
             <span className="face__pixels" />
           </div>
         </div>
