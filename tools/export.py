@@ -5,7 +5,7 @@ from comp import *
 from PIL import Image
 
 SRC = '/home/claude/mm/src/'
-OUT = '/home/claude/mm/site/src/img/'
+OUT = '/home/claude/move-media-website/src/img/'
 os.makedirs(OUT, exist_ok=True)
 report = {}
 
@@ -44,7 +44,7 @@ b = load('/home/claude/mm/raw-sara.jpg')                    # full 6000 x 3376
 b = grade(b, sat=0.9, contrast=1.02)
 b = vignette(b, 0.22)
 bd = crop_right(b, 1.6)                                      # 16:10, left edge trimmed
-enc('beirut-night', grain(cv2.resize(bd, (2560, 1600), interpolation=cv2.INTER_AREA), 0.010, 1.2), [1280, 1920, 2560], q_avif=64)
+enc('beirut-night', grain(cv2.resize(bd, (2560, 1600), interpolation=cv2.INTER_AREA), 0.010, 1.2), [1280, 1920, 2560], q_avif=55)
 bm = crop_right(b, 0.5)                                      # phone: the right half, port and horizon
 enc('beirut-night-tall', grain(cv2.resize(bm, (1200, 2400), interpolation=cv2.INTER_AREA), 0.012, 1.2), [600, 900, 1200], q_avif=64)
 
@@ -67,10 +67,27 @@ def tall_roof(c, W=1000, H=2170, top=800):
         out[top + fh:] = tail * g
     return grain(out, 0.012, 1.3, seed=31)
 
+def tall_taxi(t, W=1000, H=2170):
+    """Phone version of the panning shot that keeps the whole car: the streaked street above and
+    below is extended from the photograph's own rows (a panning blur is horizontal, so stretching it
+    vertically reads as more of the same street)."""
+    fg = t[:, 640:1770]                                          # the car with a little room either side
+    fg = cv2.resize(fg, (W, int(fg.shape[0] * W / fg.shape[1])), interpolation=cv2.INTER_AREA)
+    fh = fg.shape[0]; top = (H - fh) // 2 - 60; bot = H - top - fh
+    up = cv2.GaussianBlur(cv2.resize(fg[:90], (W, top + 120)), (0, 0), sigmaX=3, sigmaY=14)
+    dn = cv2.GaussianBlur(cv2.resize(fg[-90:], (W, bot + 120)), (0, 0), sigmaX=3, sigmaY=14)
+    out = np.zeros((H, W, 3), np.float32)
+    out[:top + 120] = up; out[top + fh - 120:] = dn
+    a = np.ones((fh, 1, 1), np.float32); f = 120
+    a[:f, 0, 0] = np.linspace(0, 1, f); a[-f:, 0, 0] = np.linspace(1, 0, f)
+    out[top:top + fh] = out[top:top + fh] * (1 - a) + fg * a
+    return grain(out, 0.012, 1.3, seed=41)
+
 # 2. taxi chapter and composites
 tw = load('/home/claude/mm/out/taxi-side-full.jpg')         # 2400 x 1600
 enc('taxi-wide', vignette(cover(tw, 2400, 1500, 0.5, 0.45), 0.25), [960, 1600, 2400])
 tc = load('/home/claude/mm/out/taxi-side-full.jpg')
+enc('taxi-tall', vignette(tall_taxi(tc), 0.25), [600, 1000])
 enc('taxi-wide-tight', vignette(cover(tc, 1400, 1600, 0.52, 0.42, zoom=1.0)[:, :], 0.25), [700, 1050, 1400])
 for k in ('logo', 'text', 'tag'):
     c = load(f'/home/claude/mm/out/close-{k}.jpg')           # 2400 x 1090
@@ -91,8 +108,8 @@ enc('led-pixels', lp, [800, 1400])
 lr = load('/home/claude/mm/out/led-rake.jpg')                # 1600 x 2400 portrait
 enc('led-rake', lr, [600, 1000])
 cl = load('/home/claude/mm/out/close-logo.jpg')
-enc('screen-face', cl[690:915, 800:1610], [810])           # the end of the housing and its post
-enc('roof-light', cl[860:1090, 650:1750], [1100])              # the screen's light on the roof
+enc('screen-face', cl[436:1090, 715:1696], [981])          # the whole lit face with its roof, 3:2           # the end of the housing and its post
+enc('roof-light', cl[720:1090, 1010:1503], [493])          # the wordmark and its reflection on the roof, 4:3              # the screen's light on the roof
 
 # 4. Lebanon by day
 enc('beirut-aerial', grade(load(SRC + 'piotr-chrobot-KqEYj1VHA_o.jpg'), sat=0.9), [960, 1600, 2400])

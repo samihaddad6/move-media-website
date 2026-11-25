@@ -23,12 +23,13 @@ export function start({ reduced }) {
     gsap.ticker.add((time) => lenis.raf(time * 1000));
   }
   gsap.ticker.lagSmoothing(0);
+  ScrollTrigger.config({ ignoreMobileResize: true });   // the phone's address bar showing or hiding must not move the pins
   const mm = gsap.matchMedia();
   const phone = () => matchMedia('(max-width: 700px)').matches;
 
   /* opening: a slow push-in, like a camera on a slider; the line and the cue let go */
   gsap.to('.hero-media', { scale: 1.08, yPercent: 3, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
-  gsap.to(['.hero-text', '.hero-cue', '.hero-cap'], { opacity: 0, y: -24, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: '45% top', scrub: true } });
+  gsap.fromTo(['.hero-text', '.hero-cue', '.hero-cap'], { opacity: 1, y: 0 }, { opacity: 0, y: -12, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: '22% top', scrub: true } });
   const drift = $('.drift');
   new IntersectionObserver(([e]) => { drift.style.animationPlayState = e.isIntersecting ? 'running' : 'paused'; }).observe($('.hero'));
 
@@ -37,43 +38,50 @@ export function start({ reduced }) {
     const f1 = $('.taxi-frame.f1'), f2 = $('.taxi-frame.f2');
     gsap.set(f1, { transformOrigin: c.conditions.d ? '47% 41%' : '50% 40%' });
     const tl = gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: '.taxi', start: 'top top', end: 'bottom bottom', scrub: true } });
-    tl.fromTo(f1, { scale: 1 }, { scale: c.conditions.d ? 1.55 : 1.35, duration: 0.6 }, 0)
-      .to('.taxi-text.t1', { opacity: 0, y: -12, duration: 0.12 }, 0.26)
-      .fromTo(f2, { opacity: 0, scale: 1.1 }, { opacity: 1, scale: 1, duration: 0.24 }, 0.42)
-      .fromTo('.taxi-text.t2', { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.1 }, 0.62)
-      .to(f2, { scale: 1.05, duration: 0.34 }, 0.66);
+    tl.fromTo(f1, { scale: 1, opacity: 1 }, { scale: c.conditions.d ? 1.15 : 1.08, duration: 0.46 }, 0)
+      .fromTo('.taxi-text.t1', { opacity: 1, y: 0 }, { opacity: 0, y: -10, duration: 0.08 }, 0.34)
+      .to(f1, { opacity: 0, duration: 0.06 }, 0.44)
+      .fromTo(f2, { opacity: 0, scale: 1.04 }, { opacity: 1, scale: 1, duration: 0.07 }, 0.5)
+      .fromTo('.taxi-text.t2', { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.08 }, 0.58)
+      .to(f2, { scale: 1.04, duration: 0.42 }, 0.58);
   });
 
   /* pictures that grow: the frame scales open while the picture inside is counter-scaled */
   $$('[data-grow]').forEach((g) => {
-    const frame = $('.grow-frame', g), inner = $('.grow-inner', g), figs = $('.figures', g);
-    ScrollTrigger.create({
-      trigger: g, start: 'top top', end: 'bottom bottom', scrub: true,
-      onUpdate: (st) => {
-        const e = inOut(clamp01(st.progress / 0.78));
-        const from = (phone() ? g.dataset.fromM : g.dataset.from) || (phone() ? '0.72,0.42' : '0.34,0.44');
-        const [x0, y0] = from.split(',').map(Number);
-        const sx = lerp(x0, 1, e), sy = lerp(y0, 1, e), z = lerp(1.18, 1, e);
-        frame.style.transform = `scale(${sx}, ${sy})`;
-        inner.style.transform = `scale(${z / sx}, ${z / sy})`;
-        if (figs) figs.classList.toggle('on', st.progress > 0.82);
-      },
-    });
+    const frame = $('.grow-frame', g), inner = $('.grow-inner', g), figs = $('.figures', g), cap = $('[data-grow-cap]', g);
+    const apply = (p) => {
+      const cs = getComputedStyle(g);
+      const x0 = parseFloat(cs.getPropertyValue('--x0')) || 1, y0 = parseFloat(cs.getPropertyValue('--y0')) || 1;
+      const ty = parseFloat(cs.getPropertyValue('--ty')) || 0;
+      const e = inOut(clamp01(p / 0.78));
+      const sx = lerp(x0, 1, e), sy = lerp(y0, 1, e), z = lerp(1.18, 1, e);
+      frame.style.transform = `scale(${sx}, ${sy})`;
+      inner.style.transform = `translateY(${(ty * (1 - e)) / sy}%) scale(${z / sx}, ${z / sy})`;
+      figs?.classList.toggle('on', p > 0.82);
+      cap?.classList.toggle('on', p > 0.82);
+    };
+    const st = ScrollTrigger.create({ trigger: g, start: 'top top', end: 'bottom bottom', onUpdate: (s) => apply(s.progress), onRefresh: (s) => apply(s.progress) });
+    apply(st.progress);
   });
 
   /* how it works: four steps, each held for a full screen of scroll */
-  const steps = $$('.step'), rail = $$('.steps-rail i');
+  const steps = $$('.step'), num = $('[data-step-n]'), bar = $('[data-step-bar]');
+  let shown = -1;
   const stl = gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: {
     trigger: '.steps', start: 'top top', end: 'bottom bottom', scrub: true,
-    onUpdate: (st) => rail.forEach((r, i) => r.classList.toggle('on', i === Math.min(3, Math.floor(st.progress * 4)))),
+    onUpdate: (st) => {
+      const n = Math.min(3, Math.floor(st.progress * 4 + 0.0001));
+      if (n !== shown) { shown = n; num.textContent = '0' + (n + 1); }
+      bar.style.transform = `scaleX(${(n + 1) / 4})`;
+    },
   } });
+  stl.set({}, {}, 4);   // four equal shares of the pin
   steps.forEach((s, i) => {
     const img = $('.step-media picture, .step-media .loop', s);
-    if (i > 0) stl.fromTo(s, { opacity: 0 }, { opacity: 1, duration: 0.14 }, i - 0.07);
-    stl.fromTo(img, { scale: 1.06 }, { scale: 1, duration: 1 }, i - (i ? 0.07 : 0));
-    if (i < steps.length - 1) stl.to(s, { opacity: 0, duration: 0.14 }, i + 0.93);
+    stl.fromTo(img, { scale: 1.05 }, { scale: 1, duration: 1 }, i);
+    if (i > 0) stl.fromTo(s, { opacity: 0 }, { opacity: 1, duration: 0.06, immediateRender: false }, i);
+    if (i < steps.length - 1) stl.fromTo(s, { opacity: 1 }, { opacity: 0, duration: 0.06, immediateRender: false }, i + 0.94);
   });
-  rail[0]?.classList.add('on');
 
   /* close-ups: pictures of different sizes drift at different speeds */
   $$('[data-speed]').forEach((f) => {
@@ -92,9 +100,13 @@ export function start({ reduced }) {
   });
 
   /* who it is for: each scene settles as it arrives over the last */
-  $$('.scene').forEach((s) => {
-    gsap.fromTo($('.scene-media', s), { scale: 1.12 }, { scale: 1, ease: 'none', scrollTrigger: { trigger: s, start: 'top bottom', end: 'top top', scrub: true } });
-    gsap.fromTo($('.scene-text', s), { opacity: 0, y: 16 }, { opacity: 1, y: 0, ease: 'none', scrollTrigger: { trigger: s, start: 'top 45%', end: 'top 5%', scrub: true } });
+  const scenes = $$('.scene');
+  scenes.forEach((s, i) => {
+    const txt = $('.scene-text', s), next = scenes[i + 1];
+    gsap.fromTo($('.scene-media', s), { scale: 1.1 }, { scale: 1, ease: 'none', scrollTrigger: { trigger: s, start: 'top bottom', end: 'top top', scrub: true } });
+    const tl = gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: s, start: 'top 55%', end: next ? 'bottom top' : 'bottom bottom', scrub: true } });
+    tl.fromTo(txt, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.25 });
+    if (next) tl.to(txt, { opacity: 1, duration: 0.3 }).to(txt, { opacity: 0, y: -10, duration: 0.2 }).to({}, { duration: 0.15 });
   });
 
   /* the bookend: the opening picture returns and the camera pulls back to rest */

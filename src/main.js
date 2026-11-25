@@ -47,29 +47,48 @@ function finish() {
 
 /* ---------- header: hides going down, returns going up, follows the section colour ---------- */
 const bar = document.querySelector('[data-bar]');
+let menuOpen = false, closeTimer = 0, navigating = false;
 let lastY = scrollY;
-addEventListener('scroll', () => {
+function onScroll() {
   const y = scrollY;
-  if (Math.abs(y - lastY) > 6) { bar.classList.toggle('hide', y > lastY && y > 120); lastY = y; }
-}, { passive: true });
-const themeIO = new IntersectionObserver((es) => {
-  for (const e of es) if (e.isIntersecting) bar.classList.toggle('is-light', e.target.dataset.theme === 'light');
-}, { rootMargin: '0px 0px -96% 0px' });
-document.querySelectorAll('[data-theme]').forEach((s) => themeIO.observe(s));
+  bar.classList.toggle('solid', y > 40);
+  if (Math.abs(y - lastY) > 6) { bar.classList.toggle('hide', y > lastY && y > 120 && !menuOpen && !navigating); lastY = y; }
+}
+addEventListener('scroll', onScroll, { passive: true });
+onScroll();
+// the header follows the colour of whatever sits under its own middle line
+const themed = [...document.querySelectorAll('[data-theme]')];
+let themeIO;
+function watchTheme() {
+  themeIO?.disconnect();
+  const mid = Math.round(bar.offsetHeight / 2);
+  themeIO = new IntersectionObserver((es) => {
+    for (const e of es) if (e.isIntersecting) bar.classList.toggle('is-light', e.target.dataset.theme === 'light');
+  }, { rootMargin: `-${mid}px 0px -${Math.max(0, innerHeight - mid - 1)}px 0px` });
+  themed.forEach((s) => themeIO.observe(s));
+}
+watchTheme();
+let lastW = innerWidth;
+addEventListener('resize', () => { if (innerWidth !== lastW) { lastW = innerWidth; watchTheme(); } });
 
 /* ---------- full-screen menu ---------- */
 const menu = document.getElementById('menu');
 const openBtn = document.querySelector('[data-menu-open]');
 const closeBtn = document.querySelector('[data-menu-close]');
 function openMenu() {
+  clearTimeout(closeTimer); menuOpen = true;
   menu.hidden = false; openBtn.setAttribute('aria-expanded', 'true');
+  doc.style.overflow = 'hidden';   // touch devices have no Lenis to stop
   requestAnimationFrame(() => menu.classList.add('open'));
   motion?.lenis?.stop(); closeBtn.focus();
 }
 function closeMenu(go) {
+  if (!menuOpen) return;
+  menuOpen = false;
   menu.classList.remove('open'); openBtn.setAttribute('aria-expanded', 'false');
+  doc.style.overflow = '';
   motion?.lenis?.start();
-  setTimeout(() => { menu.hidden = true; if (!go) openBtn.focus(); }, 450);
+  closeTimer = setTimeout(() => { menu.hidden = true; if (!go) openBtn.focus(); }, 450);
 }
 openBtn.addEventListener('click', openMenu);
 closeBtn.addEventListener('click', () => closeMenu());
@@ -90,10 +109,30 @@ document.addEventListener('click', (e) => {
   const el = document.querySelector(a.getAttribute('href'));
   if (!el) return;
   e.preventDefault();
-  if (motion?.lenis) motion.lenis.scrollTo(el, { duration: 1.4 });
-  else el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
-  el.setAttribute('tabindex', '-1'); el.focus({ preventScroll: true });
+  const top = el.getBoundingClientRect().top + scrollY;
+  const dist = Math.abs(top - scrollY);
+  // the header stays in view during and after a jump the visitor asked for
+  navigating = true; bar.classList.remove('hide');
+  const arrived = () => { navigating = false; lastY = scrollY; };
+  if (motion?.lenis) motion.lenis.scrollTo(top, { duration: Math.min(2.2, 0.9 + dist / 9000), force: true, onComplete: arrived });
+  else if (reduced) { scrollTo(0, top); arrived(); }
+  else glide(el, Math.min(1600, 700 + dist / 12), arrived);
+  if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
+  el.focus({ preventScroll: true });
 });
+
+/* Touch devices scroll natively (no Lenis). A jump is driven frame by frame, re-reading the target
+   each frame, so pictures loading on the way or a scroll-trigger refresh cannot stop it short. */
+function glide(el, ms, done) {
+  const from = scrollY, t0 = performance.now();
+  const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  (function step(now) {
+    const t = Math.min(1, (now - t0) / ms);
+    const to = el.getBoundingClientRect().top + scrollY;
+    scrollTo(0, from + (to - from) * ease(t));
+    if (t < 1) requestAnimationFrame(step); else { scrollTo(0, el.getBoundingClientRect().top + scrollY); done(); }
+  })(t0);
+}
 
 /* ---------- screens change on a steady 10-second clock, all in step ---------- */
 const clocks = [...document.querySelectorAll('[data-clock]')];

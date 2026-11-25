@@ -3,7 +3,7 @@ import asyncio, gzip, threading, os, json, io, sys
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from playwright.async_api import async_playwright
 
-DIST = '/home/claude/mm/site/dist'
+DIST = '/home/claude/move-media-website/dist'
 class H(SimpleHTTPRequestHandler):
     def __init__(s, *a, **k): super().__init__(*a, directory=DIST, **k)
     def log_message(s, *a): pass

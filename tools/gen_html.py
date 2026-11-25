@@ -33,7 +33,7 @@ PH = {'email': 'Email address to be added', 'phone': 'Phone or WhatsApp number t
 STEPS = [
     ('Your advertisement comes to us.', 'You send us the advertisement you would like to run on the screens.', 'led-pixels', 'The face of a digital LED screen, every pixel lit.', None),
     ('It joins the 10-second loop.', 'Advertisements run as 10-second spots in a repeating loop, so yours returns to the screen regularly throughout the day.', 'LOOP', 'Each spot runs for 10 seconds, then the loop moves on.', None),
-    ('It plays across the fleet.', 'The same loop runs on taxi roofs across the city, on screens that face both sides of the road.', 'taxi-wide', 'A taxi carrying the loop through the city at night.', 'taxi-wide-tight'),
+    ('It plays across the fleet.', 'The same loop runs on taxi roofs across the city, on screens that face both sides of the road.', 'taxi-wide', 'A taxi carrying the loop through the city at night.', 'taxi-tall'),
     ('Your brand travels the city.', 'The taxis carry your advertisement through the streets all day, past people walking, waiting and driving.', 'beirut-taxi', 'A taxi with its screen in a Beirut street.', 'beirut-taxi-tall'),
 ]
 WHO = [
@@ -41,19 +41,19 @@ WHO = [
     ('Retailers', 'Show your shops and new arrivals on the streets around them.', 'beirut-taxi-msg', 'beirut-taxi-msg-tall'),
     ('Restaurants and cafes', 'Show your menu and your address to people out in the city.', 'roof-text', 'roof-text-tall'),
     ('Events', 'Announce the date and the place to the whole city before the day.', 'VIDEO', None),
-    ('Launches and campaigns', 'Give a new product or campaign a presence across the city from its first day.', 'taxi-wide', 'taxi-wide-tight'),
+    ('Launches and campaigns', 'Give a new product or campaign a presence across the city from its first day.', 'taxi-wide', 'taxi-tall'),
 ]
 
 
 def step(i, s):
     t, x, img, cap, tall = s
     if img == 'LOOP':
-        media = (f'<div class="loop" data-clock>{pic("roof-logo", "The rooftop screen showing the Move Media logo.", "(max-width:900px) 100vw, 62vw", tall="roof-logo-tall", cls="on")}'
-                 f'{pic("roof-text", "The rooftop screen showing the message: Your brand, across the city.", "(max-width:900px) 100vw, 62vw", tall="roof-text-tall")}</div>')
+        media = (f'<div class="loop" data-clock>{pic("roof-logo-tall", "The rooftop screen showing the Move Media logo.", "(max-width:900px) 100vw, 62vw", cls="on")}'
+                 f'{pic("roof-text-tall", "The rooftop screen showing the message: Your brand, across the city.", "(max-width:900px) 100vw, 62vw")}</div>')
     else:
-        media = pic(img, cap, '(max-width:900px) 100vw, 62vw', tall=tall)
+        media = pic(img, cap, '(max-width:900px) 100vw, 62vw', tall=tall, pos={'beirut-taxi': '36% 50%', 'taxi-wide': '46% 50%'}.get(img))
     return (f'<article class="step" data-step="{i}"><div class="step-media">{media}</div>'
-            f'<div class="step-text"><p class="step-n">Step {i + 1} of 4</p><h3>{t}</h3><p>{x}</p><p class="cap">{cap}</p></div></article>')
+            f'<div class="step-text"><h3>{t}</h3><p>{x}</p><p class="cap">{cap}</p></div></article>')
 
 
 def who(i, w):
@@ -64,7 +64,7 @@ def who(i, w):
                  '<video muted loop playsinline preload="none" aria-hidden="true"></video></div>')
     else:
         media = pic(img, f'{n}: a Move Media screen in the city.', tall=tall)
-    day = ' day' if img.startswith('beirut-taxi') else ''
+    day = ' day' if img.startswith('beirut-taxi') or img == 'VIDEO' else ''
     return (f'<section class="scene{day}" data-theme="dark" aria-labelledby="who-{i}"><div class="scene-media">{media}</div>'
             f'<div class="scene-text"><h3 id="who-{i}">{n}</h3><p>{x}</p></div></section>')
 
@@ -83,12 +83,12 @@ html = f'''<!doctype html>
 <meta name="theme-color" content="#FF5A1F">
 <link rel="preload" href="./src/fonts/InterDisplay-Bold.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./src/fonts/InterDisplay-Regular.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" as="image" type="image/avif" imagesrcset="{srcset("beirut-night", "avif")}" imagesizes="100vw" media="not ((max-width: 700px) and (orientation: portrait))">
+<link rel="preload" as="image" type="image/avif" imagesrcset="{srcset("beirut-night", "avif")}" imagesizes="100vw" media="(min-width: 701px), (orientation: landscape)">
 <link rel="preload" as="image" type="image/avif" imagesrcset="{srcset("beirut-night-tall", "avif")}" imagesizes="100vw" media="(max-width: 700px) and (orientation: portrait)">
 <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
-<a class="skip" href="#about">Skip to content</a>
+<a class="skip" href="#main">Skip to content</a>
 
 <div class="loader" aria-hidden="true"><div class="loader-mark">{SVG("symbol-orange")}</div><p class="loader-n"><span data-pct>0</span></p></div>
 
@@ -103,7 +103,7 @@ html = f'''<!doctype html>
   <div class="menu-foot"><p>{PH["email"]}</p><p>{PH["phone"]}</p><p>{PH["insta"]}</p></div>
 </div>
 
-<main>
+<main id="main" tabindex="-1">
 <section class="hero" id="top" data-theme="dark">
   <div class="hero-media"><div class="drift">{pic("beirut-night", "Beirut at night, seen from the hills, with the port lit on the right.", tall="beirut-night-tall", eager=True, pos="100% 50%")}</div></div>
   <div class="hero-text"><h1>Digital advertising<br>on the move.</h1></div>
@@ -113,7 +113,7 @@ html = f'''<!doctype html>
 
 <section class="taxi" data-theme="dark" aria-label="On the roof of a taxi">
   <div class="taxi-pin">
-    <div class="taxi-frame f1">{pic("taxi-wide", "A taxi at night with a Move Media screen on its roof.", tall="taxi-wide-tight")}</div>
+    <div class="taxi-frame f1">{pic("taxi-wide", "A taxi at night with a Move Media screen on its roof.", tall="taxi-tall")}</div>
     <div class="taxi-frame f2">{pic("roof-logo", "Close to the roof: the Move Media screen, lit.", tall="roof-logo-tall")}</div>
     <div class="taxi-text t1"><h2>On the roof of a taxi</h2><p>A double-sided digital screen that travels through the city all day.</p></div>
     <div class="taxi-text t2"><h2>Two faces, one on each side</h2><p>Seen at street level from both sides of the road.</p></div>
@@ -126,21 +126,21 @@ html = f'''<!doctype html>
     <h2 class="display">Move Media is a Lebanese advertising company.</h2>
     <p class="statement">We place double-sided digital LED screens on the roofs of taxis. Brands book space on the screens, and their advertisements travel through the city all day, seen by people on the street, in traffic and on the pavement.</p>
   </div>
-  <div class="grow" data-grow data-from="0.64,0.4" data-from-m="0.84,0.36" style="--o: 50% 70%"><div class="grow-pin"><div class="grow-frame"><div class="grow-inner">{pic("roof-tag", "The rooftop screen showing the line: Digital advertising on the move.", tall="roof-tag-tall")}</div></div><p class="grow-cap">The rooftop screen, at night.</p></div></div>
+  <div class="grow" data-grow data-from="0.62,0.42" data-from-m="0.84,0.36" data-shift="-0.21" data-shift-m="-0.15"><div class="grow-pin"><div class="grow-frame"><div class="grow-inner">{pic("roof-tag", "The rooftop screen showing the line: Digital advertising on the move.", tall="roof-tag-tall")}</div></div><p class="grow-cap" data-grow-cap>The rooftop screen, at night.</p></div></div>
 </section>
 
 <section class="how" id="how" data-theme="dark">
   <div class="wrap"><p class="label">How it works</p><h2 class="display">Four steps from your file to the street.</h2></div>
-  <div class="steps" data-steps><div class="steps-pin">{"".join(step(i, s) for i, s in enumerate(STEPS))}<div class="steps-rail" aria-hidden="true"><i></i><i></i><i></i><i></i></div></div></div>
+  <div class="steps" data-steps><div class="steps-pin">{"".join(step(i, s) for i, s in enumerate(STEPS))}<div class="steps-count" aria-hidden="true"><span data-step-n>01</span> / 04<i><b data-step-bar></b></i></div></div></div>
 </section>
 
 <section class="close" data-theme="dark" aria-labelledby="close-h">
   <div class="wrap close-head"><p class="label">Up close</p><h2 class="display" id="close-h">The screen, in detail.</h2></div>
   <div class="close-grid wrap">
-    <figure class="c1" data-speed="-0.06">{pic("led-pixels", "Close-up of the LED pixels, lit orange.", "(max-width:700px) 92vw, 44vw")}<figcaption>Digital LED pixels, bright by day and by night.</figcaption></figure>
-    <figure class="c2" data-speed="0.08">{pic("screen-face", "One face of the rooftop screen, showing the Move Media logo.", "(max-width:700px) 80vw, 30vw")}<figcaption>One of the two faces, lit at night.</figcaption></figure>
-    <figure class="c3" data-speed="-0.02">{pic("led-rake", "The LED surface at a raking angle.", "(max-width:700px) 70vw, 30vw")}<figcaption>Advertisements change quickly, with nothing to print.</figcaption></figure>
-    <figure class="c4" data-speed="0.1">{pic("roof-light", "The screen's light falling on the roof of the taxi.", "(max-width:700px) 80vw, 36vw")}<figcaption>Two faces: each side can show the same advertisement or a different one.</figcaption></figure>
+    <figure class="c1" data-speed="-0.025">{pic("led-pixels", "Close-up of the LED pixels, lit orange.", "(max-width:700px) 92vw, 44vw")}<figcaption>Digital LED pixels, bright by day and by night.</figcaption></figure>
+    <figure class="c2" data-speed="0.03">{pic("screen-face", "One face of the rooftop screen, showing the Move Media logo.", "(max-width:700px) 80vw, 34vw")}<figcaption>One of the two faces, lit at night.</figcaption></figure>
+    <figure class="c3" data-speed="-0.015">{pic("led-rake", "The LED surface at a raking angle.", "(max-width:700px) 70vw, 30vw")}<figcaption>Advertisements change quickly, with nothing to print.</figcaption></figure>
+    <figure class="c4" data-speed="0.03">{pic("roof-light", "The lit screen and its reflection on the roof of the taxi.", "(max-width:700px) 80vw, 40vw")}<figcaption>Two faces: each side can show the same advertisement or a different one.</figcaption></figure>
   </div>
 </section>
 
@@ -214,5 +214,5 @@ html = f'''<!doctype html>
 # master SVGs carry their own <title>; inside links and decorative spots they would be read twice
 head, body = html.split('</head>', 1)
 html = head + '</head>' + re.sub(r'<title>[^<]*</title>', '', body)
-open('/home/claude/mm/site/index.html', 'w').write(html)
+open('/home/claude/move-media-website/index.html', 'w').write(html)
 print('written', len(html))

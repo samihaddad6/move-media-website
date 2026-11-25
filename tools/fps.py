@@ -1,10 +1,10 @@
 import asyncio, subprocess, time, json, statistics
 from playwright.async_api import async_playwright
 async def main():
-    srv = subprocess.Popen(['python3','-m','http.server','8767','-d','/home/claude/mm/site/dist'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL); time.sleep(1)
+    srv = subprocess.Popen(['python3','-m','http.server','8767','-d','/home/claude/move-media-website/dist'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL); time.sleep(1)
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--enable-gpu-rasterization','--ignore-gpu-blocklist','--use-angle=swiftshader'])
-        pg = await b.new_page(viewport={'width':1440,'height':900})
+        pg = await b.new_page(viewport={'width':1024,'height':768})
         await pg.goto('http://localhost:8767/'); await pg.wait_for_timeout(3000)
         await pg.evaluate("window.__d=[];let l=performance.now();(function f(t){window.__d.push(t-l);l=t;requestAnimationFrame(f)})(l)")
         H = await pg.evaluate('document.documentElement.scrollHeight')
