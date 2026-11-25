@@ -1,34 +1,31 @@
-# Move Media website, version 2
+# Move Media website, version 3
 
-A single-page site for Move Media: double-sided digital screens on taxi roofs in Lebanon.
-Built with React, Vite, GSAP (ScrollTrigger), Lenis and Three.js, and shipped as one
-self-contained HTML file (fonts, logo files, images and 3D code all inside).
+A film and a photography book about the city: real photographs and footage of Beirut and Lebanon, with the Move Media rooftop screen composited onto real taxis. Built with Vite, GSAP (ScrollTrigger) and Lenis, as normal files with hashed names.
 
 ## Commands
 
 ```
 npm install
 npm run dev      # local preview at http://localhost:5173
-npm run build    # writes dist/index.html, the single page that is published
+npm run build    # writes dist/, the folder that is published
 ```
+
+## Publishing on Render (static site)
+
+- Build command: `npm install && npm run build`
+- Publish directory: `dist`
+- Headers: `/assets/*` with `Cache-Control: public, max-age=31536000, immutable` (every file in it has a hashed name).
 
 ## Where things live
 
-- `src/content.js` holds every word on the page, including the placeholders to confirm.
-- `src/sections/` holds one file per section (Header, Hero, About, How, Why, Coverage, Who, Contact, Footer).
-- `src/three/` holds the 3D scenes: `hero.js` (the opening taxi scene), `taxi.js`, `street.js`,
-  `aerial.js` (the city from the air, used live in Coverage) and `kit.js` (shared rendering helpers).
-- `src/lib/motion.js` is the single scroll and frame loop: one Lenis instance driven by `gsap.ticker`.
-- `src/assets/brand/` holds the master SVG logo files from the logo kit, used as they are.
-- `src/assets/img/` holds still images rendered from the same 3D scenes.
-- `dev/bake.html` and `dev/bake.js` re-render those still images (open them in Chrome through a local
-  server at the project root, for example `python3 -m http.server`, with `?shot=street`, `faceon`,
-  `aerial`, `carside` or `led`).
+- `index.html` holds every word and picture of the page (it is written by `tools/gen_html.py`).
+- `src/style.css` holds the whole design; `src/main.js` the loader, header, menu, form and video; `src/motion.js` the scroll scenes, loaded after the first screen.
+- `src/img/` holds every picture in AVIF and WebP at two or three widths; `src/video/` the one 8-second loop.
+- `tools/` holds the picture pipeline (compositing the screen onto real photographs, grading, encoding) and the test scripts (screenshots, Slow 4G measurement, frame rate).
+- `CREDITS.md` lists the source and licence of every picture and video.
 
-## Placeholders to fill in (in `src/content.js`)
+## Placeholders to fill in
 
-- Launch fleet: "Up to 300 taxis" (placeholder, to be confirmed).
-- Launch date: "January 2027" (placeholder, to be confirmed).
-- Contact email (also the address the form opens in the visitor's email app).
-- Phone or WhatsApp number.
-- Instagram account.
+- Launch fleet "Up to 300" and launch date "January 2027" (Coverage), both marked as placeholders.
+- Email address (menu, contact, footer, and `EMAIL` in `src/main.js` for the form).
+- Phone or WhatsApp number, Instagram account.
