@@ -29,3 +29,8 @@ npm run build    # writes dist/, the folder that is published
 - Launch fleet "Up to 300" and launch date "January 2027" (Coverage), both marked as placeholders.
 - Email address (menu, contact, footer, and `EMAIL` in `src/main.js` for the form).
 - Phone or WhatsApp number, Instagram account.
+
+## Where it is published
+
+- GitHub: branch `v3` of samihaddad6/move-media-website (version 2 stays on `main`).
+- Render: the static site `move-media-v3`, https://move-media-v3.onrender.com, built from `v3` with `npm ci && npm run build`, publishing `dist`.
