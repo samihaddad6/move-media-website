@@ -93,14 +93,6 @@ for k in ('logo', 'text', 'tag'):
     c = load(f'/home/claude/mm/out/close-{k}.jpg')           # 2400 x 1090
     enc(f'roof-{k}', vignette(c, 0.25), [960, 1600, 2400])
     enc(f'roof-{k}-tall', vignette(tall_roof(c), 0.25), [600, 1000])
-m = load('/home/claude/mm/out/merc-full.jpg')                # 1601 x 2400
-enc('beirut-taxi', grade(m[1250:2250], sat=0.95), [960, 1601])
-enc('beirut-taxi-tall', grade(m[900:2400, 50:1050], sat=0.95), [600, 1000])
-for k in ('text',):
-    p = f'/home/claude/mm/out/merc-{k}.jpg'
-    if os.path.exists(p):
-        mt = load(p); enc('beirut-taxi-msg', grade(mt[1250:2250], sat=0.95), [960, 1601])
-        enc('beirut-taxi-msg-tall', grade(mt[900:2400, 50:1050], sat=0.95), [600, 1000])
 
 # 3. close-ups
 lp = load('/home/claude/mm/out/led-symbol.jpg')

@@ -31,42 +31,52 @@ NAV = [('About', '#about'), ('How it works', '#how'), ('Coverage', '#coverage'),
 PH = {'email': 'Email address to be added', 'phone': 'Phone or WhatsApp number to be added', 'insta': 'Instagram account to be added'}
 
 STEPS = [
-    ('Your advertisement comes to us.', 'You send us the advertisement you would like to run on the screens.', 'led-pixels', 'The face of a digital LED screen, every pixel lit.', None),
-    ('It joins the 10-second loop.', 'Advertisements run as 10-second spots in a repeating loop, so yours returns to the screen regularly throughout the day.', 'LOOP', 'Each spot runs for 10 seconds, then the loop moves on.', None),
-    ('It plays across the fleet.', 'The same loop runs on taxi roofs across the city, on screens that face both sides of the road.', 'taxi-wide', 'A taxi carrying the loop through the city at night.', 'taxi-tall'),
-    ('Your brand travels the city.', 'The taxis carry your advertisement through the streets all day, past people walking, waiting and driving.', 'beirut-taxi', 'A taxi with its screen in a Beirut street.', 'beirut-taxi-tall'),
+    ('Your advertisement comes to us.', 'You send us the advertisement you would like to run on the screens.'),
+    ('It joins the 10-second loop.', 'Advertisements run as 10-second spots in a repeating loop, so yours returns to the screen regularly throughout the day.'),
+    ('It plays across the fleet.', 'The same loop runs on taxi roofs across the city, on screens that face both sides of the road.'),
+    ('Your brand travels the city.', 'The taxis carry your advertisement through the streets all day, past people walking, waiting and driving.'),
 ]
 WHO = [
-    ('Brands', 'Keep your name in front of the city, on screens that travel all day.', 'roof-logo', 'roof-logo-tall'),
-    ('Retailers', 'Show your shops and new arrivals on the streets around them.', 'beirut-taxi-msg', 'beirut-taxi-msg-tall'),
-    ('Restaurants and cafes', 'Show your menu and your address to people out in the city.', 'roof-text', 'roof-text-tall'),
+    ('Brands', 'Keep your name in front of the city, on screens that travel all day.', 'roof-logo', '50% 72%'),
+    ('Retailers', 'Show your shops and new arrivals on the streets around them.', 'downtown', '50% 62%'),
+    ('Restaurants and cafes', 'Show your menu and your address to people out in the city.', 'skyline-dusk', '50% 60%'),
     ('Events', 'Announce the date and the place to the whole city before the day.', 'VIDEO', None),
-    ('Launches and campaigns', 'Give a new product or campaign a presence across the city from its first day.', 'taxi-wide', 'taxi-tall'),
+    ('Launches and campaigns', 'Give a new product or campaign a presence across the city from its first day.', 'taxi-wide', '46% 45%'),
 ]
+FLEET = json.load(open('/home/claude/mm/tk/fleet.json'))
+ROUTE = {'d': [0, 10, 7, 14, 5], 'm': [0, 9, 7, 12, 6]}   # indices into FLEET: from the screen's taxi towards the port
 
 
-def step(i, s):
-    t, x, img, cap, tall = s
-    if img == 'LOOP':
-        media = (f'<div class="loop" data-clock>{pic("roof-logo-tall", "The rooftop screen showing the Move Media logo.", "(max-width:900px) 100vw, 62vw", cls="on")}'
-                 f'{pic("roof-text-tall", "The rooftop screen showing the message: Your brand, across the city.", "(max-width:900px) 100vw, 62vw")}</div>')
-    else:
-        media = pic(img, cap, '(max-width:900px) 100vw, 62vw', tall=tall, pos={'beirut-taxi': '36% 50%', 'taxi-wide': '46% 50%'}.get(img))
-    return (f'<article class="step" data-step="{i}"><div class="step-media">{media}</div>'
-            f'<div class="step-text"><h3>{t}</h3><p>{x}</p><p class="cap">{cap}</p></div></article>')
+def curve(pts):
+    """Smooth path through points (Catmull-Rom to cubic Bezier), in a 0..100 viewBox."""
+    d = f'M{pts[0][0]} {pts[0][1]}'
+    for i in range(len(pts) - 1):
+        p0 = pts[max(0, i - 1)]; p1 = pts[i]; p2 = pts[i + 1]; p3 = pts[min(len(pts) - 1, i + 2)]
+        c1 = (p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6)
+        c2 = (p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6)
+        d += f' C{c1[0]:.2f} {c1[1]:.2f} {c2[0]:.2f} {c2[1]:.2f} {p2[0]} {p2[1]}'
+    return d
+
+
+def city_layer(v):
+    pts = FLEET[v]
+    dots = ''.join(f'<i style="left:{x}%;top:{y}%"></i>' for x, y in pts[1:])
+    path = curve([pts[i] for i in ROUTE[v]])
+    return (f'<div class="fleet fleet-{v}" data-target="{pts[0][0]},{pts[0][1]}">{dots}'
+            f'<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path class="trail" pathLength="1" d="{path}"/></svg>'
+            f'<span class="taxi-light"></span></div>')
 
 
 def who(i, w):
-    n, x, img, tall = w
+    n, x, img, pos = w
     if img == 'VIDEO':
         media = ('<div class="vid" data-video>'
-                 f'{pic("traffic-poster", "Night traffic, out of focus, with the orange light of a screen.", tall="traffic-poster-tall")}'
+                 f'{pic("traffic-poster", "", "(max-width:860px) 70vw, 24vw")}'
                  '<video muted loop playsinline preload="none" aria-hidden="true"></video></div>')
     else:
-        media = pic(img, f'{n}: a Move Media screen in the city.', tall=tall)
-    day = ' day' if img.startswith('beirut-taxi') or img == 'VIDEO' else ''
-    return (f'<section class="scene{day}" data-theme="dark" aria-labelledby="who-{i}"><div class="scene-media">{media}</div>'
-            f'<div class="scene-text"><h3 id="who-{i}">{n}</h3><p>{x}</p></div></section>')
+        media = pic(img, '', '(max-width:860px) 70vw, 24vw', pos=pos)
+    return (f'<li class="who-row" tabindex="0"><h3 class="who-name">{n}</h3><p class="who-line">{x}</p>'
+            f'<div class="who-pic" aria-hidden="true">{media}</div></li>')
 
 
 html = f'''<!doctype html>
@@ -108,7 +118,6 @@ html = f'''<!doctype html>
   <div class="hero-media"><div class="drift">{pic("beirut-night", "Beirut at night, seen from the hills, with the port lit on the right.", tall="beirut-night-tall", eager=True, pos="100% 50%")}</div></div>
   <div class="hero-text"><h1>Digital advertising<br>on the move.</h1></div>
   <p class="hero-cue">Scroll down<i aria-hidden="true"></i></p>
-  <p class="hero-cap">Beirut, after dark</p>
 </section>
 
 <section class="taxi" data-theme="dark" aria-label="On the roof of a taxi">
@@ -126,21 +135,30 @@ html = f'''<!doctype html>
     <h2 class="display">Move Media is a Lebanese advertising company.</h2>
     <p class="statement">We place double-sided digital LED screens on the roofs of taxis. Brands book space on the screens, and their advertisements travel through the city all day, seen by people on the street, in traffic and on the pavement.</p>
   </div>
-  <div class="grow" data-grow data-from="0.62,0.42" data-from-m="0.84,0.36" data-shift="-0.21" data-shift-m="-0.15"><div class="grow-pin"><div class="grow-frame"><div class="grow-inner">{pic("roof-tag", "The rooftop screen showing the line: Digital advertising on the move.", tall="roof-tag-tall")}</div></div><p class="grow-cap" data-grow-cap>The rooftop screen, at night.</p></div></div>
+  <div class="grow" data-grow data-from="0.62,0.42" data-from-m="0.84,0.36" data-shift="-0.21" data-shift-m="-0.15"><div class="grow-pin"><div class="grow-frame"><div class="grow-inner">{pic("roof-tag", "The rooftop screen showing the line: Digital advertising on the move.", tall="roof-tag-tall")}</div></div></div></div>
 </section>
 
-<section class="how" id="how" data-theme="dark">
-  <div class="wrap"><p class="label">How it works</p><h2 class="display">Four steps from your file to the street.</h2></div>
-  <div class="steps" data-steps><div class="steps-pin">{"".join(step(i, s) for i, s in enumerate(STEPS))}<div class="steps-count" aria-hidden="true"><span data-step-n>01</span> / 04<i><b data-step-bar></b></i></div></div></div>
+<section class="how" id="how" data-theme="dark" aria-labelledby="how-h">
+  <div class="how-stage">
+    <div class="how-city" aria-hidden="true"><div class="how-box city-box">{pic("beirut-night", "", tall="beirut-night-tall")}{city_layer("d")}{city_layer("m")}</div></div>
+    <div class="how-shot" aria-hidden="true"><div class="how-box shot-box">
+      <div class="shots">{pic("roof-text", "", tall="roof-text-tall", cls="on")}{pic("roof-logo", "", tall="roof-logo-tall")}{pic("roof-tag", "", tall="roof-tag-tall")}</div>
+      <div class="panel"><i class="wipe"></i></div>
+    </div></div>
+    <div class="how-head"><h2 id="how-h" class="how-title">How it works</h2></div>
+    <div class="how-bar" aria-hidden="true"><span><i></i></span><span><i></i></span><span><i></i></span><span><i></i></span></div>
+    <ol class="how-copy">{"".join(f'<li class="how-item"><span class="how-num" aria-hidden="true">{i + 1}</span><div class="how-step"><h3>{t}</h3><p>{x}</p></div></li>' for i, (t, x) in enumerate(STEPS))}</ol>
+    <div class="how-timer" aria-hidden="true"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="30"/><circle class="t" cx="32" cy="32" r="30" pathLength="1"/></svg><span class="how-sec">10</span><span class="how-unit">seconds</span></div>
+  </div>
 </section>
 
 <section class="close" data-theme="dark" aria-labelledby="close-h">
   <div class="wrap close-head"><p class="label">Up close</p><h2 class="display" id="close-h">The screen, in detail.</h2></div>
   <div class="close-grid wrap">
-    <figure class="c1" data-speed="-0.025">{pic("led-pixels", "Close-up of the LED pixels, lit orange.", "(max-width:700px) 92vw, 44vw")}<figcaption>Digital LED pixels, bright by day and by night.</figcaption></figure>
-    <figure class="c2" data-speed="0.03">{pic("screen-face", "One face of the rooftop screen, showing the Move Media logo.", "(max-width:700px) 80vw, 34vw")}<figcaption>One of the two faces, lit at night.</figcaption></figure>
+    <figure class="c1" data-speed="-0.025">{pic("led-pixels", "Close-up of the LED pixels, lit orange.", "(max-width:700px) 92vw, 44vw")}<figcaption>Bright by day and by night.</figcaption></figure>
+    <figure class="c2" data-speed="0.03">{pic("screen-face", "One face of the rooftop screen, showing the Move Media logo.", "(max-width:700px) 80vw, 34vw")}<figcaption>Each side can show the same advertisement or a different one.</figcaption></figure>
     <figure class="c3" data-speed="-0.015">{pic("led-rake", "The LED surface at a raking angle.", "(max-width:700px) 70vw, 30vw")}<figcaption>Advertisements change quickly, with nothing to print.</figcaption></figure>
-    <figure class="c4" data-speed="0.03">{pic("roof-light", "The lit screen and its reflection on the roof of the taxi.", "(max-width:700px) 80vw, 40vw")}<figcaption>Two faces: each side can show the same advertisement or a different one.</figcaption></figure>
+    <figure class="c4" data-speed="0.03">{pic("roof-light", "The lit screen and its reflection on the roof of the taxi.", "(max-width:700px) 80vw, 40vw")}<figcaption>Seen at street level from both sides of the road.</figcaption></figure>
   </div>
 </section>
 
@@ -150,7 +168,7 @@ html = f'''<!doctype html>
     <article class="idea"><div class="idea-text"><h3>It goes where people are.</h3><p>The advertisement moves with the taxi, through the streets where people walk, shop and wait in traffic.</p></div>
       <figure class="idea-fig route"><svg viewBox="0 0 600 380" role="img" aria-label="Diagram: one taxi's route through a grid of streets."><g class="grid">{"".join(f'<line x1="{x}" y1="20" x2="{x}" y2="360"/>' for x in range(40, 600, 76))}{"".join(f'<line x1="20" y1="{y}" x2="580" y2="{y}"/>' for y in range(40, 380, 64))}</g><path class="route-line" pathLength="1" d="M40 360 V296 H192 V232 H344 V104 H496 V40 H572"/><circle class="route-end" cx="572" cy="40" r="5"/><circle class="route-start" cx="40" cy="360" r="5"/></svg><figcaption>One taxi, one day: the advertisement passes every street on its route.</figcaption></figure></article>
     <article class="idea"><div class="idea-text"><h3>Bright by day and by night.</h3><p>The screens stay clear in full sun and after dark, so the advertisement is seen at every hour.</p></div>
-      <div class="idea-fig pair"><figure>{pic("downtown", "A Beirut street at midday.", "(max-width:700px) 46vw, 24vw")}<figcaption>Midday</figcaption></figure><figure>{pic("beirut-night-crop", "Beirut at night.", "(max-width:700px) 46vw, 24vw")}<figcaption>Midnight</figcaption></figure></div></article>
+      <div class="idea-fig pair"><figure>{pic("downtown", "A Beirut street at midday.", "(max-width:700px) 46vw, 24vw")}</figure><figure>{pic("beirut-night-crop", "Beirut at night.", "(max-width:700px) 46vw, 24vw")}</figure></div></article>
     <article class="idea"><div class="idea-text"><h3>Seen from both sides of the road.</h3><p>Each screen has two faces, seen at street level from either side. Each side can show the same advertisement or a different one.</p></div>
       <figure class="idea-fig faces"><svg viewBox="0 0 600 340" role="img" aria-label="Diagram seen from above: a taxi in the road with its two screen faces, one towards each pavement."><line class="kerb" x1="20" y1="60" x2="580" y2="60"/><line class="kerb" x1="20" y1="280" x2="580" y2="280"/><line class="lane" x1="20" y1="170" x2="580" y2="170"/><rect class="car" x="210" y="136" width="180" height="68" rx="20"/><rect class="scr" x="250" y="160" width="100" height="20"/><line class="face" x1="250" y1="160" x2="350" y2="160"/><line class="face" x1="250" y1="180" x2="350" y2="180"/><path class="look" d="M300 150 V78 M292 88 L300 76 L308 88"/><path class="look" d="M300 190 V262 M292 252 L300 264 L308 252"/><text x="300" y="44">Pavement, one side</text><text x="300" y="312">Pavement, other side</text></svg><figcaption>Seen from above: one face towards each pavement.</figcaption></figure></article>
     <article class="idea"><div class="idea-text"><h3>Nothing to print.</h3><p>Advertisements change quickly on the screens, with nothing to print and nothing to install.</p></div>
@@ -171,8 +189,10 @@ html = f'''<!doctype html>
     <div class="figures"><p><strong>Up to 300</strong><span>taxis in the launch fleet</span><em class="ph">Placeholder, to be confirmed</em></p><p><strong>January 2027</strong><span>launch date</span><em class="ph">Placeholder, to be confirmed</em></p></div></div></div>
 </section>
 
-<section class="who-intro" id="who" data-theme="dark"><div class="wrap"><p class="label">Who it is for</p><h2 class="display">For anyone who wants to be seen across the city.</h2></div></section>
-<div class="scenes">{"".join(who(i, w) for i, w in enumerate(WHO))}</div>
+<section class="who" id="who" data-theme="dark" aria-labelledby="who-h">
+  <div class="wrap"><p class="label">Who it is for</p><h2 class="display" id="who-h">For anyone who wants to be seen across the city.</h2>
+  <ul class="who-list">{"".join(who(i, w) for i, w in enumerate(WHO))}</ul></div>
+</section>
 
 <section class="contact light" id="contact" data-theme="light">
   <div class="wrap contact-grid">
@@ -190,7 +210,7 @@ html = f'''<!doctype html>
       </form>
       <ul class="contact-ph"><li>{PH["email"]}</li><li>{PH["phone"]}</li><li>{PH["insta"]}</li></ul>
     </div>
-    <figure class="contact-fig">{pic("beirut-taxi", "A taxi at rest in a Beirut street, its screen showing the Move Media logo.", "(max-width:900px) 100vw, 46vw")}<figcaption>A taxi at rest, its screen still showing.</figcaption></figure>
+    <figure class="contact-fig">{pic("roof-logo-tall", "The Move Media screen on the roof of a taxi at night.", "(max-width:900px) 100vw, 46vw", pos="50% 66%")}</figure>
   </div>
 </section>
 </main>

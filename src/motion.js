@@ -64,24 +64,7 @@ export function start({ reduced }) {
     apply(st.progress);
   });
 
-  /* how it works: four steps, each held for a full screen of scroll */
-  const steps = $$('.step'), num = $('[data-step-n]'), bar = $('[data-step-bar]');
-  let shown = -1;
-  const stl = gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: {
-    trigger: '.steps', start: 'top top', end: 'bottom bottom', scrub: true,
-    onUpdate: (st) => {
-      const n = Math.min(3, Math.floor(st.progress * 4 + 0.0001));
-      if (n !== shown) { shown = n; num.textContent = '0' + (n + 1); }
-      bar.style.transform = `scaleX(${(n + 1) / 4})`;
-    },
-  } });
-  stl.set({}, {}, 4);   // four equal shares of the pin
-  steps.forEach((s, i) => {
-    const img = $('.step-media picture, .step-media .loop', s);
-    stl.fromTo(img, { scale: 1.05 }, { scale: 1, duration: 1 }, i);
-    if (i > 0) stl.fromTo(s, { opacity: 0 }, { opacity: 1, duration: 0.06, immediateRender: false }, i);
-    if (i < steps.length - 1) stl.fromTo(s, { opacity: 1 }, { opacity: 0, duration: 0.06, immediateRender: false }, i + 0.94);
-  });
+  setupHow();
 
   /* close-ups: pictures of different sizes drift at different speeds */
   $$('[data-speed]').forEach((f) => {
@@ -99,15 +82,7 @@ export function start({ reduced }) {
       { x: () => dx * innerWidth * 0.09, y: () => dy * innerHeight * 0.16, ease: 'none', scrollTrigger: { trigger: '.constellation', start: 'top bottom', end: 'bottom top', scrub: true, invalidateOnRefresh: true } });
   });
 
-  /* who it is for: each scene settles as it arrives over the last */
-  const scenes = $$('.scene');
-  scenes.forEach((s, i) => {
-    const txt = $('.scene-text', s), next = scenes[i + 1];
-    gsap.fromTo($('.scene-media', s), { scale: 1.1 }, { scale: 1, ease: 'none', scrollTrigger: { trigger: s, start: 'top bottom', end: 'top top', scrub: true } });
-    const tl = gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: s, start: 'top 55%', end: next ? 'bottom top' : 'bottom bottom', scrub: true } });
-    tl.fromTo(txt, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.25 });
-    if (next) tl.to(txt, { opacity: 1, duration: 0.3 }).to(txt, { opacity: 0, y: -10, duration: 0.2 }).to({}, { duration: 0.15 });
-  });
+  setupWho();
 
   /* the bookend: the opening picture returns and the camera pulls back to rest */
   gsap.fromTo('.foot-inner', { scale: 1.2 }, { scale: 1, ease: 'none', scrollTrigger: { trigger: '.foot', start: 'top bottom', end: 'bottom bottom', scrub: true } });
@@ -118,6 +93,119 @@ export function start({ reduced }) {
   document.fonts.ready.then(refresh);
   addEventListener('load', refresh);
   $$('img[loading="lazy"]').forEach((i) => i.addEventListener('load', debounce(refresh, 300), { once: true }));
+}
+
+/* ---------- how it works ----------
+   One pinned stage, four equal quarters, as in version 2: the advertisement arrives on the face of a real
+   rooftop screen (its rows light from the top), the loop runs in real time with a 10-second timer, the
+   screen shrinks into one light among the taxis in the city, and that light travels a route through it. */
+const range = (p, a, b) => clamp01((p - a) / (b - a));
+const smooth = (t) => t * t * (3 - 2 * t);
+const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+function setupHow() {
+  const el = $('.how');
+  if (!el) return;
+  const stage = $('.how-stage', el), shot = $('.shot-box', el), shotWrap = $('.how-shot', el);
+  const cityBox = $('.city-box', el), cityWrap = $('.how-city', el), wipe = $('.wipe', el);
+  const shots = $$('.shots picture', el), nums = $$('.how-num', el), steps = $$('.how-step', el), fills = $$('.how-bar i', el);
+  const timer = $('.how-timer', el), ring = $('.how-timer .t', el), sec = $('.how-sec', el);
+  let geo = null;
+
+  const measure = () => {
+    const f = $(matchMedia('(max-width: 700px) and (orientation: portrait)').matches ? '.fleet-m' : '.fleet-d', el);
+    const cs = getComputedStyle(shot);
+    const v = (k) => parseFloat(cs.getPropertyValue(k));
+    const [pl, pt, pw, ph] = ['--pl', '--pt', '--pw', '--ph'].map(v);
+    const ty = parseFloat(cs.transform === 'none' ? '-64' : '0');
+    const vw = innerWidth, vh = stage.offsetHeight, sw = shot.offsetWidth, sh = shot.offsetHeight;
+    const yShift = matchMedia('(max-width: 700px) and (orientation: portrait)').matches ? 0.56 : 0.64;
+    const pcx = vw / 2 - sw / 2 + (sw * (pl + pw / 2)) / 100;
+    const pcy = vh / 2 - yShift * sh + (sh * (pt + ph / 2)) / 100;
+    const [tx, ty2] = f.dataset.target.split(',').map(Number);
+    const cw = cityBox.offsetWidth, ch = cityBox.offsetHeight;
+    const path = $('.trail', f);
+    geo = { dx: vw / 2 + (tx / 100 - 0.5) * cw - pcx, dy: vh / 2 + (ty2 / 100 - 0.5) * ch - pcy, yShift,
+      dots: $$('i', f), path, len: path.getTotalLength(), light: $('.taxi-light', f) };
+    shot.style.transformOrigin = `${pl + pw / 2}% ${pt + ph / 2}%`;
+    cityBox.style.transformOrigin = `${tx}% ${ty2}%`;
+  };
+
+  let loopOn = false, lastPop = '', raf = 0;
+  const render = (p) => {
+    if (!geo) measure();
+    const seg = p * 4;
+    // the copy: each step holds the middle of its quarter and hands over at the joins
+    for (let i = 0; i < 4; i++) {
+      const d = seg - (i + 0.5);
+      const o = (i === 0 && seg < 0.5) || (i === 3 && seg > 3.5) ? 1 : clamp01(1 - (Math.abs(d) - 0.36) / 0.12);
+      const y = o < 1 ? d * -26 : 0;
+      nums[i].style.opacity = steps[i].style.opacity = String(o);
+      nums[i].style.transform = `translate3d(0, ${y.toFixed(1)}px, 0)`;
+      steps[i].style.transform = `translate3d(0, ${(y * 0.6).toFixed(1)}px, 0)`;
+      steps[i].style.visibility = o < 0.01 ? 'hidden' : '';
+      fills[i].style.transform = `scaleX(${clamp01(seg - i).toFixed(4)})`;
+    }
+    // 1. the advertisement arrives: the face lights row by row, from the top
+    wipe.style.transform = `translate3d(0, ${(easeOut(range(p, 0.03, 0.18)) * 101).toFixed(2)}%, 0)`;
+    // 2. the loop: a 10-second timer, the messages change on the clock
+    const tOn = smooth(range(p, 0.25, 0.29)) * (1 - smooth(range(p, 0.48, 0.52)));
+    timer.style.opacity = tOn.toFixed(3);
+    const on = seg >= 0.95 && seg < 2.1;
+    if (on !== loopOn) { loopOn = on; if (on) tick(); else { cancelAnimationFrame(raf); show(0); } }
+    // 3. one screen becomes one light among the fleet
+    const s3 = smooth(range(p, 0.5, 0.64));
+    shot.style.transform = `translate(calc(-50% + ${(geo.dx * s3).toFixed(1)}px), calc(-${geo.yShift * 100}% + ${(geo.dy * s3).toFixed(1)}px)) scale(${(1 - s3 * 0.985).toFixed(4)})`;
+    shotWrap.style.opacity = String(1 - range(p, 0.6, 0.66));
+    const cityIn = smooth(range(p, 0.5, 0.6));
+    const z = smooth(range(p, 0.75, 1));
+    cityWrap.style.opacity = cityIn.toFixed(3);
+    cityBox.style.transform = `translate(-50%, -50%) scale(${(1.12 - 0.12 * cityIn + 0.1 * z).toFixed(4)})`;
+    const pop = range(p, 0.56, 0.74);
+    const key = pop.toFixed(3);
+    if (key !== lastPop) {
+      lastPop = key;
+      geo.dots.forEach((d, i) => { d.style.opacity = pop * 1.5 - (i / geo.dots.length) * 0.5 > 0 ? '0.95' : '0'; });
+    }
+    // 4. that light travels the city, drawing its route as it goes
+    const r = range(p, 0.77, 0.97);
+    geo.path.style.strokeDashoffset = String(1 - r);
+    const pt = geo.path.getPointAtLength(r * geo.len);
+    geo.light.style.opacity = String(range(p, 0.75, 0.77));
+    geo.light.style.transform = `translate3d(${(pt.x / 100) * cityBox.offsetWidth}px, ${(pt.y / 100) * cityBox.offsetHeight}px, 0)`;
+  };
+  // the loop runs in real time, in step with every other screen on the page
+  const show = (k) => shots.forEach((s, i) => s.classList.toggle('on', i === k));
+  const tick = () => {
+    const now = Date.now(), f = (now % 10000) / 10000;
+    ring.style.strokeDashoffset = String(1 - f);
+    sec.textContent = String(10 - Math.floor(f * 10));
+    show(Math.floor(now / 10000) % shots.length);
+    raf = requestAnimationFrame(tick);
+  };
+  ScrollTrigger.create({ trigger: el, start: 'top top', end: 'bottom bottom',
+    onUpdate: (s) => render(s.progress), onRefresh: (s) => { measure(); render(s.progress); } });
+  render(0);
+}
+
+/* ---------- who it is for: the list; the line in the middle of the screen opens ---------- */
+function setupWho() {
+  const rows = $$('.who-row');
+  let current = -1;
+  const set = (i) => {
+    if (i === current) return;
+    current = i;
+    rows.forEach((r, k) => {
+      r.classList.toggle('is-open', k === i);
+      const v = $('video', r);
+      if (v && v.querySelector('source')) { if (k === i) v.play().catch(() => {}); else v.pause(); }
+    });
+  };
+  rows.forEach((row, i) => ScrollTrigger.create({ trigger: row, start: 'top 58%', end: 'bottom 42%', onToggle: (s) => s.isActive && set(i) }));
+  const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  rows.forEach((r, i) => {
+    if (fine) r.addEventListener('pointerenter', () => set(i));
+    r.addEventListener('focusin', () => set(i));
+  });
 }
 
 /* headings and statements rise into place once, on an expo ease */

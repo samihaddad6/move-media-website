@@ -104,7 +104,7 @@ async def main():
                 order.append(await pg.evaluate("()=>{const a=document.activeElement;return (a.className||a.tagName)+':'+(a.textContent||'').trim().slice(0,14)}"))
             ok('Tab order: skip link, logo, Menu, Contact', 'skip' in order[0] and 'bar-logo' in order[1] and 'menu-btn' in order[2] and 'Contact' in order[3], ' | '.join(order))
             await pg.keyboard.press('Tab')
-            ok('the next stop is the first form field (no other controls before it)', await pg.evaluate("()=>document.activeElement.id") == 'f-name')
+            ok('the next stop is the first line of Who it is for, which opens on focus', await pg.evaluate("()=>document.activeElement.classList.contains('who-row') && document.activeElement.classList.contains('is-open')"))
             await pg.keyboard.press('Shift+Tab')
             ring = await pg.evaluate("()=>getComputedStyle(document.activeElement).outlineStyle")
             ok('focus outline is visible', ring != 'none', ring)

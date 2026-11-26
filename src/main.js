@@ -160,9 +160,11 @@ document.querySelectorAll('[data-video]').forEach((box) => {
       v.addEventListener('playing', () => v.classList.add('ready'), { once: true });
     }
   }, { rootMargin: '60% 0px' }).observe(box);
+  const row = box.closest('.who-row');
   new IntersectionObserver(([e]) => {
     if (!loaded || reduced) return;
-    if (e.isIntersecting) v.play().catch(() => {}); else v.pause();
+    // in the list, a card only plays while its line is open
+    if (e.isIntersecting && (!row || row.classList.contains('is-open'))) v.play().catch(() => {}); else v.pause();
   }, { threshold: 0.15 }).observe(box);
 });
 
