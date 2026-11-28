@@ -34,3 +34,7 @@ Free, commercially licensed night footage of Beirut barely exists on Pexels, Pix
 ## Rules kept
 
 No bloom halos, glows, flares, beams, particles, scanning or glitch effects; no orbit and no fly-through; orange only where a real screen gives off light and as the single accent. One Lenis instance, native scrolling on touch, one WebGL canvas. Weaker graphics cards and phones get fewer depth steps and a lower pixel ratio automatically; without WebGL the site falls back to version 3.
+
+## Recommendation
+
+Direction C, the edit. Its rack focus on arrival, its cut on movement and its match cut from the screen to a light in the city are the moves a film editor would make, they need no camera movement that a real camera could not make, and the match cut tells the story Sami approved for How it works (the screen becomes one light among the taxis in the city). Inside the chapters, the slow push-ins of direction A can be kept, since they are the same camera on a slider.
