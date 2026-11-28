@@ -47,7 +47,7 @@ const A = {
     // taxi chapter: a slow push-in to the screen; the face lights up; the light falls on the roof
     if (Y < z.t2[0]) {
       roof.screen.power = power(k);
-      Object.assign(roof.cam, { at: S.faceAt, to: [0.5, 0.42], toK: inout(k), pivot: 0, x: 0, y: 0, dolly: 0.16 * inout(k), zoom: 1.0 + (S.portrait ? 0.8 : 1.2) * inout(k), focus: 0.44, aperture: 7, maxR: 30 });
+      Object.assign(roof.cam, { at: S.faceAt, to: [0.5, 0.42], toK: inout(k), pivot: 0, x: 0, y: 0, dolly: 0.16 * inout(k), zoom: 1.0 + (S.portrait ? 0.3 : 1.2) * inout(k), focus: 0.44, aperture: 7, maxR: 30 });
       S.ui('tag', 0); S.ui('cue', 0);
       S.ui('taxi1', seg(k, 0.16, 0.26) * (1 - seg(k, 0.5, 0.58))); S.ui('taxi2', seg(k, 0.62, 0.72) * (1 - seg(k, 0.92, 1)));
       return { a: roof, mode: 0, mix: 0 };

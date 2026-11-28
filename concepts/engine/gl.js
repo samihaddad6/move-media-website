@@ -231,7 +231,7 @@ export class Stage {
     if (!gl) throw new Error('no-webgl2');
     this.gl = gl;
     this.weak = opts.weak || false;
-    this.dprMax = opts.dprMax || (this.weak ? 1.25 : 2);
+    this.dprMax = opts.dprMax || (this.weak ? 1.25 : 1.5);
     this.quality = this.weak ? 0.6 : 1;
     const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
