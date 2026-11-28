@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: move-media-v3
+    name: move-media-v4
     runtime: static
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
